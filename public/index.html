@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 图片标签识别与翻译系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 80px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+            float: right;
+        }
+
+        .export-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .export-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            display: block;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            display: block;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+            display: block;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .image-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .image-info h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .label-content {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #333;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        .label-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .label-status.processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .label-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .label-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .batch-actions {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .batch-actions.show {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .batch-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .batch-delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .batch-delete-btn:hover {
+            background: #c82333;
+        }
+
+        .image-card {
+            position: relative;
+        }
+
+        .image-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 4px;
+        }
+
+        .translate-section {
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+        }
+
+        .translate-section h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .translate-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .translate-input {
+            flex: 1;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .translate-input:focus {
+            border-color: #667eea;
+        }
+
+        .translate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .translate-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .translate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .translate-result {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            min-height: 50px;
+            display: none;
+        }
+
+        .translate-result.show {
+            display: block;
+        }
+
+        .translate-result-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .translate-result-text {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/logo.png" alt="Logo" class="logo">
+            <h1>🖼️ AI 图片标签识别与翻译系统</h1>
+        </div>
+        
+        <div class="upload-section" id="uploadSection">
+            <h2>上传图片</h2>
+            <p style="margin: 20px 0; color: #666;">支持拖拽上传或点击选择文件</p>
+            <input type="file" id="fileInput" accept="image/*" multiple>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                选择图片
+            </button>
+            <button class="export-btn" id="exportBtn" onclick="exportAllLabels()">
+                导出所有（图片+标签）
+            </button>
+            <div class="clearfix"></div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="translate-section">
+            <h2>🌐 文本翻译</h2>
+            <div class="translate-input-container">
+                <input type="text" id="translateInput" class="translate-input" 
+                       placeholder="输入中文标签，按回车键翻译...">
+                <button class="translate-btn" id="translateBtn" onclick="translateText()">
+                    翻译
+                </button>
+            </div>
+            <div class="translate-result" id="translateResult">
+                <div class="translate-result-label">翻译结果：</div>
+                <div class="translate-result-text" id="translateResultText"></div>
+            </div>
+        </div>
+
+        <div class="batch-actions" id="batchActions">
+            <input type="checkbox" id="selectAll" class="batch-checkbox" onchange="toggleSelectAll()">
+            <label for="selectAll" style="cursor: pointer;">全选</label>
+            <button class="batch-delete-btn" onclick="deleteSelectedImages()">
+                批量删除 (<span id="selectedCount">0</span>)
+            </button>
+        </div>
+
+        <div class="images-grid" id="imagesGrid"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const statusDiv = document.getElementById('status');
+        const imagesGrid = document.getElementById('imagesGrid');
+        const exportBtn = document.getElementById('exportBtn');
+        const batchActions = document.getElementById('batchActions');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const translateInput = document.getElementById('translateInput');
+        const translateBtn = document.getElementById('translateBtn');
+        const translateResult = document.getElementById('translateResult');
+        const translateResultText = document.getElementById('translateResultText');
+        let selectedImages = new Set();
+
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 加载所有图片
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/images');
+                const data = await response.json();
+                displayImages(data.images);
+            } catch (error) {
+                console.error('加载图片失败:', error);
+            }
+        }
+
+        // 显示图片
+        function displayImages(images) {
+            imagesGrid.innerHTML = '';
+            
+            if (images.length === 0) {
+                imagesGrid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">暂无图片</p>';
+                exportBtn.disabled = true;
+                return;
+            }
+
+            exportBtn.disabled = false;
+
+            images.forEach(image => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                const isSelected = selectedImages.has(image.imageFilename);
+                card.innerHTML = `
+                    <input type="checkbox" class="image-checkbox" data-filename="${image.imageFilename}" 
+                           onchange="toggleImageSelection('${image.imageFilename}')" ${isSelected ? 'checked' : ''}>
+                    <img src="${image.imageUrl}" alt="${image.imageFilename}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+                    <div class="image-info">
+                        <h3>${image.imageFilename}</h3>
+                        <div class="label-status ${image.hasLabel ? 'completed' : 'processing'}">
+                            ${image.hasLabel ? '✓ 标签已生成' : '⏳ 处理中...'}
+                        </div>
+                        ${image.hasLabel ? `
+                            <div class="label-content" id="label-${image.imageFilename}">加载中...</div>
+                        ` : ''}
+                        <button class="delete-btn" onclick="deleteImage('${image.imageFilename}')">删除</button>
+                    </div>
+                `;
+                imagesGrid.appendChild(card);
+
+                // 如果有标签，加载标签内容
+                if (image.hasLabel && image.labelFilename) {
+                    loadLabelContent(image.labelFilename, image.imageFilename);
+                }
+            });
+
+            updateBatchActions();
+        }
+
+        // 加载标签内容
+        async function loadLabelContent(labelFilename, imageFilename) {
+            try {
+                const response = await fetch(`/api/label/${labelFilename}`);
+                const data = await response.json();
+                const labelDiv = document.getElementById(`label-${imageFilename}`);
+                if (labelDiv) {
+                    labelDiv.textContent = data.content;
+                }
+            } catch (error) {
+                console.error('加载标签失败:', error);
+            }
+        }
+
+        // 上传文件
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            card.innerHTML = `
+                <img src="${URL.createObjectURL(file)}" alt="${file.name}">
+                <div class="image-info">
+                    <h3>${file.name}</h3>
+                    <div class="label-status processing">⏳ 正在识别图片...</div>
+                </div>
+            `;
+            imagesGrid.insertBefore(card, imagesGrid.firstChild);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(`图片 ${file.name} 处理完成！`, 'success');
+                    // 重新加载所有图片
+                    await loadImages();
+                } else {
+                    throw new Error(result.error || '处理失败');
+                }
+            } catch (error) {
+                showStatus(`处理失败: ${error.message}`, 'error');
+                card.querySelector('.label-status').className = 'label-status error';
+                card.querySelector('.label-status').textContent = '✗ 处理失败';
+            }
+        }
+
+        // 文件选择处理
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                await uploadFile(file);
+            }
+            fileInput.value = '';
+        });
+
+        // 拖拽上传
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            
+            const files = Array.from(e.dataTransfer.files).filter(file => 
+                file.type.startsWith('image/')
+            );
+
+            for (const file of files) {
+                await uploadFile(file);
+            }
+        });
+
+        // 删除图片
+        async function deleteImage(filename) {
+            if (!confirm('确定要删除这张图片和它的标签吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/image/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showStatus('删除成功', 'success');
+                    await loadImages();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                showStatus(`删除失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 导出所有图片和标签
+        async function exportAllLabels() {
+            try {
+                showStatus('正在导出图片和标签...', 'info');
+                const response = await fetch('/api/export');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'images-and-labels.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showStatus('导出成功！', 'success');
+                } else {
+                    throw new Error('导出失败');
+                }
+            } catch (error) {
+                showStatus(`导出失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 切换图片选择状态
+        function toggleImageSelection(filename) {
+            const checkbox = document.querySelector(`input.image-checkbox[data-filename="${filename}"]`);
+            if (checkbox.checked) {
+                selectedImages.add(filename);
+            } else {
+                selectedImages.delete(filename);
+            }
+            updateBatchActions();
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('input.image-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const filename = checkbox.getAttribute('data-filename');
+                if (isChecked) {
+                    selectedImages.add(filename);
+                } else {
+                    selectedImages.delete(filename);
+                }
+            });
+            
+            updateBatchActions();
+        }
+
+        // 更新批量操作栏
+        function updateBatchActions() {
+            const count = selectedImages.size;
+            selectedCountSpan.textContent = count;
+            
+            if (count > 0) {
+                batchActions.classList.add('show');
+            } else {
+                batchActions.classList.remove('show');
+            }
+            
+            // 更新全选复选框状态
+            const checkboxes = document.querySelectorAll('input.image-checkbox');
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = !allChecked && count > 0;
+        }
+
+        // 批量删除图片
+        async function deleteSelectedImages() {
+            const filenames = Array.from(selectedImages);
+            if (filenames.length === 0) {
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${filenames.length} 张图片和它们的标签吗？`)) {
+                return;
+            }
+
+            try {
+                showStatus('正在删除...', 'info');
+                const response = await fetch('/api/images/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filenames })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    selectedImages.clear();
+                    showStatus(`成功删除 ${filenames.length} 张图片`, 'success');
+                    await loadImages();
+                } else {
+                    throw new Error(result.error || '删除失败');
+                }
+            } catch (error) {
+                showStatus(`删除失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 翻译文本
+        async function translateText() {
+            const text = translateInput.value.trim();
+            
+            if (!text) {
+                showStatus('请输入要翻译的文本', 'error');
+                return;
+            }
+
+            translateBtn.disabled = true;
+            translateBtn.textContent = '翻译中...';
+            translateResult.classList.remove('show');
+
+            try {
+                showStatus('正在翻译...', 'info');
+                const response = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    translateResultText.textContent = result.translated;
+                    translateResult.classList.add('show');
+                    showStatus('翻译完成！', 'success');
+                } else {
+                    throw new Error(result.error || '翻译失败');
+                }
+            } catch (error) {
+                showStatus(`翻译失败: ${error.message}`, 'error');
+                translateResultText.textContent = '翻译失败，请重试';
+                translateResult.classList.add('show');
+            } finally {
+                translateBtn.disabled = false;
+                translateBtn.textContent = '翻译';
+            }
+        }
+
+        // 回车键触发翻译
+        translateInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                translateText();
+            }
+        });
+
+        // 页面加载时获取所有图片
+        loadImages();
+    </script>
+</body>
+</html>
+

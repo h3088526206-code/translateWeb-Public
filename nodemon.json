@@ -1,0 +1,10 @@
+{
+  "watch": ["server.js", "public"],
+  "ext": "js,json,html,css",
+  "ignore": ["uploads/*", "labels/*", "node_modules/*", "*.txt"],
+  "exec": "node server.js",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
+

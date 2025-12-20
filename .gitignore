@@ -1,0 +1,11 @@
+node_modules/
+uploads/
+labels/
+*.log
+.DS_Store
+.env
+.vscode/
+.idea/
+*.zip
+package-lock.json
+
